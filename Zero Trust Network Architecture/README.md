@@ -8,6 +8,12 @@
 | **Private Link** | Eliminates public endpoints for PaaS — compliance & defense-in-depth |
 | **Modular Terraform** | Clean, reusable, production-ready IaC |  
 
+## Tech Stack
+
+- **Terraform** (modular, reusable)
+- **Azure Firewall**, **Bastion**, **VNet Peering**
+- **UDR**, **Private Endpoints**
+  
 
 
 
