@@ -7,3 +7,8 @@ This project demonstrates how to detect brute-force login attempts in Azure Acti
 The alert rule is provisioned via Terraform and custom KQL query that analyzes failed sign-in events.  
 A Sentinel playbook is also included to automate response actions such as sending notifications.  
 
+```bash
+terraform init
+terraform plan -var="subscription_id=$(az account show --query id -o tsv)"
+terraform apply
+
