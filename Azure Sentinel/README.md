@@ -9,6 +9,5 @@ A Sentinel playbook is also included to automate response actions such as sendin
 
 ```bash
 terraform init
-terraform plan -var="subscription_id=$(az account show --query id -o tsv)"
-terraform apply
-
+terraform plan -var="subscription_id=$(az account show --query id -o tsv)" -out deploy.plan
+terraform apply deploy.plan
