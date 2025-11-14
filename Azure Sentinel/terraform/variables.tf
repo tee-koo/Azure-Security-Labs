@@ -6,7 +6,7 @@ variable "subscription_id" {
 variable "resource_group" {
   description = "RG where Log Analytics & Sentinel exist"
   type        = string
-  default     = "rg-sentinel-az500"
+  default     = "rg-log-general"
 }
 
 variable "log_analytics_name" {
