@@ -1,0 +1,6 @@
+let threshold = 5;
+SigninLogs
+| where ResultType != 0
+| summarize FailedAttempts = count(), LatestFailure = max(TimeGenerated) by UserPrincipalName, IPAddress
+| where FailedAttempts >= threshold
+| project UserPrincipalName, IPAddress, FailedAttempts, LatestFailure
