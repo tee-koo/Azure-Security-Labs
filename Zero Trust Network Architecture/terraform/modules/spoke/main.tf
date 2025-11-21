@@ -1,6 +1,6 @@
 resource "azurerm_virtual_network" "spoke" {
   name                = "vnet-spoke"
-  address_space       = ["10.100.100.128/26"]
+  address_space       = ["10.100.100.128/26"] # 128-191
   location            = var.location
   resource_group_name = var.resource_group_name
   tags                = var.tags
@@ -20,7 +20,7 @@ resource "azurerm_subnet" "db" {
   address_prefixes     = ["10.100.100.144/28"]  # 144–159
 }
 
-# Storage + Private Endpoint (esimerkkinä)
+# Storage + Private Endpoint
 resource "azurerm_storage_account" "demo" {
   name                     = "stghubspoke${random_string.suffix.result}"
   resource_group_name      = var.resource_group_name
@@ -45,7 +45,7 @@ resource "azurerm_private_endpoint" "storage_pe" {
   }
 }
 
-# Yhteinen salasana molemmille VM:ille
+# Sama salasana molemmille VM:ille
 resource "random_password" "admin_password" {
   length      = 16
   min_upper   = 1
