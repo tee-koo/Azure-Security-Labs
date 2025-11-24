@@ -8,4 +8,6 @@ This repository implements an enterprise-grade, centralized Hub-and-Spoke networ
 
 All traffic from workload subnets is forced through Azure Firewall, with no direct internet access. Secure remote access is provided via Azure Bastion.  
 
-![pic1](https://github.com/tee-koo/Azure-Projects/blob/main/Zero%20Trust%20Network%20Architecture/pic1.jpg)
+![pic1](pic1.jpg)  
+
+
