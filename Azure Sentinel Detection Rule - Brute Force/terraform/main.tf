@@ -5,7 +5,7 @@ resource "azurerm_sentinel_alert_rule_scheduled" "brute_force_signins" {
   severity                   = "Medium"
   tactics                    = ["InitialAccess"]
 
-  # KQL-kysely: havaitsee useita epäonnistuneita kirjautumisia samasta IP:stä
+  # KQL query: Detect multiple failed sign-ins from the same IP address
   query = <<QUERY
 SigninLogs
 | where isnotempty(IPAddress)
@@ -17,9 +17,9 @@ SigninLogs
 | extend AlertSeverity = "Medium"
 QUERY
 
-  query_frequency     = "PT5M"   # Suorita joka 5. minuutti
-  query_period        = "PT5M"   # Tarkastele viimeisimpiä 5 minuuttia
+  query_frequency     = "PT5M"   # Run every 5 minutes
+  query_period        = "PT5M"   # Analyze the last 5 minutes of data
   trigger_threshold   = 1
   trigger_operator    = "GreaterThan"
-  enabled             = true     # Luo automaattisesti Incidentin
+  enabled             = true     # Automatically create an Incident in Sentinel
 }
