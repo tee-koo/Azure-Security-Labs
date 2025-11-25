@@ -10,8 +10,9 @@ This module deploys a **production-safe** Microsoft Sentinel analytics rule that
 
 ## Requirements
 - Microsoft Sentinel must be enabled on the Log Analytics workspace  
-- Azure AD Sign-in logs must be streaming to the workspace  
+- Azure AD Sign-in logs must be streaming to the workspace
 
+## Usage  
 ```bash
 terraform init
 terraform plan -var-file="terraform.tfvars" -out deploy.plan
