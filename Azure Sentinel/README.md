@@ -5,9 +5,8 @@
 
 This project demonstrates how to detect brute-force login attempts in Azure Active Directory using Microsoft Sentinel.  
 The alert rule is provisioned via Terraform and custom KQL query that analyzes failed sign-in events.  
-A Sentinel playbook is also included to automate response actions such as sending notifications.  
 
 ```bash
 terraform init
-terraform plan -var="subscription_id=$(az account show --query id -o tsv)" -out deploy.plan
+terraform plan -var-file="terraform.tfvars" -out deploy.plan
 terraform apply deploy.plan
