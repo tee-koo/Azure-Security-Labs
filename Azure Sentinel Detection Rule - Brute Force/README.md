@@ -3,7 +3,7 @@
 [![Terraform](https://img.shields.io/badge/Terraform-Ready-blue)](https://terraform.io)
 [![AZ-500](https://img.shields.io/badge/AZ--500-Ready-green)](#)  
 
-### This module deploys a **production-safe** Microsoft Sentinel analytics rule that:  
+### This module deploys a production-safe Microsoft Sentinel analytics rule that:  
 
 - Monitors **Azure AD Sign-in logs** for repeated failed logins (`ResultType == 50126`)  
 - Triggers an **automatic Incident** in Sentinel when threshold is exceeded  
