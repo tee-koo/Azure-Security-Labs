@@ -20,4 +20,4 @@ terraform apply deploy.plan
 ```
 
 ## Detection rule in Microsoft Sentinel  
-![pic2](/picture/pic2.jpg)  
+![pic2](picture/pic2.jpg)  
