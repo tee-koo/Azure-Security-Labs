@@ -5,7 +5,7 @@
 
 ### This module deploys a Microsoft Sentinel analytics rule that:  
 
-- Monitors **Azure AD Sign-in logs** for repeated failed logins (`ResultType == 50126`)  
+- Monitors **Entra ID Sign-in logs** for repeated failed logins (`ResultType == 50126`)  
 - Triggers an **automatic Incident** in Sentinel when threshold is exceeded  
 
 ## Requirements
