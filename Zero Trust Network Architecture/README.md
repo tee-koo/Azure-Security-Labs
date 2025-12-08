@@ -6,7 +6,9 @@
 
 This repository implements an enterprise-grade, centralized Hub-and-Spoke network topology in Azure using Terraform, fully aligned with Zero Trust security principles.  
 
-All traffic from workload subnets is forced through Azure Firewall, with no direct internet access. Secure remote access is provided via Azure Bastion.  
+All traffic from workload subnets is forced through Azure Firewall, with no direct internet access.  
+
+Secure remote access is provided via Azure Bastion.  
 
 ![pic1](picture/pic1.jpg)  
 
