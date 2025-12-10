@@ -1,11 +1,11 @@
-# Luo yhteinen RG kaikille resursseille
+# Create RG
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
   location = var.location
   tags     = var.tags
 }
 
-# Hub ja Spoke moduulit
+# Hub and Spoke moodeles
 module "hub" {
   source              = "./modules/hub"
   resource_group_name = azurerm_resource_group.main.name
@@ -41,7 +41,7 @@ resource "azurerm_virtual_network_peering" "spoke_to_hub" {
   allow_forwarded_traffic      = true
 }
 
-# Yksi Route Table: kaikki liikenne palomuurin kautta
+# One Route Table: All traffic through firewall
 resource "azurerm_route_table" "to_firewall" {
   name                = "rt-all-to-firewall"
   location            = var.location
