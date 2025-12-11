@@ -56,7 +56,7 @@ resource "azurerm_route_table" "to_firewall" {
   }
 }
 
-# Liitä UDR molempiin spoke-subnetteihin
+# Connect UDR for both spoke subnets
 resource "azurerm_subnet_route_table_association" "app_to_fw" {
   subnet_id      = module.spoke.app_subnet_id
   route_table_id = azurerm_route_table.to_firewall.id
