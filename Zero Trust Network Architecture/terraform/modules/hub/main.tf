@@ -44,7 +44,7 @@ resource "azurerm_firewall" "hub_fw" {
   }
 }
 
-# Network Rule: sallii ICMP (tracert) – UUDET LÄHTEET
+# Network Rule: Allow ICMP (tracert)
 resource "azurerm_firewall_network_rule_collection" "allow_icmp" {
   name                = "Allow-ICMP"
   azure_firewall_name = azurerm_firewall.hub_fw.name
@@ -61,7 +61,7 @@ resource "azurerm_firewall_network_rule_collection" "allow_icmp" {
   }
 }
 
-# Application Rule: sallii HTTP/HTTPS – UUDET LÄHTEET
+# Application Rule: Allow HTTP/HTTPS
 resource "azurerm_firewall_application_rule_collection" "allow_http_https" {
   name                = "Allow-HTTP-HTTPS"
   azure_firewall_name = azurerm_firewall.hub_fw.name
