@@ -45,7 +45,7 @@ resource "azurerm_private_endpoint" "storage_pe" {
   }
 }
 
-# Sama salasana molemmille VM:ille
+# Same password fot both VMs
 resource "random_password" "admin_password" {
   length      = 16
   min_upper   = 1
