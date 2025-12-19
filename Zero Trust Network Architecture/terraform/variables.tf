@@ -14,8 +14,8 @@ variable "tags" {
   description = "Common tags"
   type        = map(string)
   default = {
-    owner   = "tko"
-    user    = "tko"
+    owner   = "tee-koo"
+    user    = "tee-koo"
     expiry  = "2026-12-31"
   }
 }
