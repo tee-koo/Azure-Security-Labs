@@ -5,7 +5,7 @@ resource "azurerm_resource_group" "main" {
   tags     = var.tags
 }
 
-# Hub and Spoke moodeles
+# Hub and Spoke moodules
 module "hub" {
   source              = "./modules/hub"
   resource_group_name = azurerm_resource_group.main.name
