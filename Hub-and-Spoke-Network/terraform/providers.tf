@@ -11,8 +11,9 @@ terraform {
   }
 }
 
+# Authentication and subscription context are supplied through the Azure CLI
+# and ARM_* environment variables. Do not hardcode subscription IDs or secrets.
 provider "azurerm" {
-  subscription_id = "xxx-xxx-xxx-xxx-xxx"
   features {}
 }
 
