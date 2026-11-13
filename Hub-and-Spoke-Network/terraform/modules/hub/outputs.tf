@@ -17,3 +17,7 @@ output "firewall_public_ip" {
 output "bastion_name" {
   value = azurerm_bastion_host.hub_bastion.name
 }
+
+output "bastion_subnet_prefix" {
+  value = azurerm_subnet.bastion.address_prefixes[0]
+}
