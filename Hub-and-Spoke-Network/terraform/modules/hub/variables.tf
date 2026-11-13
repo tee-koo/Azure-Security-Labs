@@ -1,11 +1,19 @@
-variable "resource_group_name" { 
-  type = string 
+variable "resource_group_name" {
+  description = "Resource group for Hub resources"
+  type        = string
 }
 
-variable "location" { 
-  type = string 
+variable "location" {
+  description = "Azure region"
+  type        = string
 }
 
-variable "tags" { 
-  type = map(string) 
+variable "tags" {
+  description = "Common resource tags"
+  type        = map(string)
+}
+
+variable "allowed_outbound_fqdns" {
+  description = "FQDN allowlist for outbound HTTP/HTTPS"
+  type        = list(string)
 }
