@@ -24,47 +24,41 @@ The design is organization-neutral and can be used as a starting point for discu
 The current configuration deploys one Hub VNet and one Spoke VNet.
 
 ```mermaid
-flowchart LR
-    Admin[Administrator]
+flowchart TB
+    Admin[Administrator] -->|Management session| Bastion
 
     subgraph Hub["Hub VNet · 10.100.100.0/25"]
+        direction LR
         Bastion[Azure Bastion]
         Firewall[Azure Firewall]
     end
 
     subgraph Spoke["Spoke VNet · 10.100.100.128/26"]
-        direction TB
-        AppSubnet["Application subnet · NSG"]
-        DbSubnet["Database subnet · NSG"]
-        PESubnet["Private Endpoint subnet"]
-        AppVM[Application VM]
-        DbVM[Database VM]
-        PE[Blob Private Endpoint]
-        AppSubnet --> AppVM
-        DbSubnet --> DbVM
-        PESubnet --> PE
+        direction LR
+        subgraph Workloads["Workload subnets"]
+            direction TB
+            AppSubnet["Application subnet · NSG"] --> AppVM[Application VM]
+            DbSubnet["Database subnet · NSG"] --> DbVM[Database VM]
+        end
+        subgraph PrivateAccess["Private Endpoint subnet"]
+            direction TB
+            PE[Blob Private Endpoint]
+        end
     end
-
-    Storage[Azure Storage · Blob]
-    Internet((Internet))
-
-    Admin -->|Management session| Bastion
-    Bastion -->|Private RDP| AppVM
-    Bastion -->|Private RDP| DbVM
 
     Hub <-->|VNet peering| Spoke
 
-    AppVM -->|Outbound connection| Firewall
-    DbVM -->|Outbound connection| Firewall
-    Firewall -->|Allowed outbound traffic| Internet
-    Internet -->|Return traffic for established flows| Firewall
+    AppVM -->|Outbound| Firewall
+    DbVM -->|Outbound| Firewall
+    Firewall -->|Allowed traffic| Internet((Internet))
+    Internet -->|Established-flow response| Firewall
     Firewall -->|Return traffic| AppVM
     Firewall -->|Return traffic| DbVM
 
     AppVM -->|Private DNS + private IP| PE
-    PE --> Storage
+    PE --> Storage[Azure Storage · Blob]
 
-    AppVM -.->|System-assigned Managed Identity| BlobRole["Storage Blob Data Reader"]
+    AppVM -.->|Managed Identity| BlobRole["Storage Blob Data Reader"]
     BlobRole -.-> Storage
 ```
 
