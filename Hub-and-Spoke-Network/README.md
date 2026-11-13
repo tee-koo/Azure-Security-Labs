@@ -24,13 +24,16 @@ The design is organization-neutral and can be used as a starting point for discu
 The current configuration deploys one Hub VNet and one Spoke VNet.
 
 ```mermaid
-flowchart TB
-    Admin[Administrator] --> Bastion[Azure Bastion]
+flowchart LR
+    Admin[Administrator]
+
     subgraph Hub["Hub VNet · 10.100.100.0/25"]
-        Bastion
+        Bastion[Azure Bastion]
         Firewall[Azure Firewall]
     end
+
     subgraph Spoke["Spoke VNet · 10.100.100.128/26"]
+        direction TB
         AppSubnet["Application subnet · NSG"]
         DbSubnet["Database subnet · NSG"]
         PESubnet["Private Endpoint subnet"]
@@ -41,14 +44,28 @@ flowchart TB
         DbSubnet --> DbVM
         PESubnet --> PE
     end
+
+    Storage[Azure Storage · Blob]
+    Internet((Internet))
+
+    Admin -->|Management session| Bastion
+    Bastion -->|Private RDP| AppVM
+    Bastion -->|Private RDP| DbVM
+
     Hub <-->|VNet peering| Spoke
-    AppVM -->|Default route for outbound traffic| Firewall
-    DbVM -->|Default route for outbound traffic| Firewall
+
+    AppVM -->|Outbound connection| Firewall
+    DbVM -->|Outbound connection| Firewall
+    Firewall -->|Allowed outbound traffic| Internet
+    Internet -->|Return traffic for established flows| Firewall
+    Firewall -->|Return traffic| AppVM
+    Firewall -->|Return traffic| DbVM
+
     AppVM -->|Private DNS + private IP| PE
-    PE --> Storage[Azure Storage · Blob]
+    PE --> Storage
+
     AppVM -.->|System-assigned Managed Identity| BlobRole["Storage Blob Data Reader"]
     BlobRole -.-> Storage
-    Firewall --> Internet[Internet]
 ```
 
 The diagram is a conceptual view. The default route sends default-route traffic from the application and database subnets to Azure Firewall. It does not mean every network flow, including all same-VNet traffic or Private Endpoint traffic, is inspected by the firewall.
