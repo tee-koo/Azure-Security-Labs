@@ -17,7 +17,6 @@ module "hub" {
   location               = var.location
   tags                   = var.tags
   allowed_outbound_fqdns = var.allowed_outbound_fqdns
-  bastion_subnet_prefix  = var.bastion_subnet_prefix
 }
 
 module "spoke" {
@@ -26,7 +25,7 @@ module "spoke" {
   location              = var.location
   tags                  = var.tags
   private_dns_zone_id   = azurerm_private_dns_zone.blob.id
-  bastion_subnet_prefix = var.bastion_subnet_prefix
+  bastion_subnet_prefix = module.hub.bastion_subnet_prefix
 }
 
 # Link the Blob Private DNS zone to the workload VNet so workloads can
