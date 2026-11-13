@@ -17,3 +17,8 @@ variable "allowed_outbound_fqdns" {
   description = "FQDN allowlist for outbound HTTP/HTTPS"
   type        = list(string)
 }
+
+variable "bastion_subnet_prefix" {
+  description = "Address prefix reserved for AzureBastionSubnet"
+  type        = string
+}
