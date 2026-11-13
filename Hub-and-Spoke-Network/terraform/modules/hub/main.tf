@@ -19,7 +19,7 @@ resource "azurerm_subnet" "bastion" {
   name                 = "AzureBastionSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.hub.name
-  address_prefixes     = ["10.100.100.64/26"]
+  address_prefixes     = [var.bastion_subnet_prefix]
 }
 
 resource "azurerm_public_ip" "firewall_pip" {
