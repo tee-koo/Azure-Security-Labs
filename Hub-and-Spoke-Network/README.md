@@ -1,25 +1,27 @@
 # Azure Hub-and-Spoke Network Lab
 
-A practical Azure networking and security lab built with Terraform. The project demonstrates a centralized Hub-and-Spoke topology and provides a foundation for exploring enterprise Azure architecture, governance, and security controls.
+A practical Azure networking and security lab built with Terraform. The project demonstrates a small enterprise-style Hub-and-Spoke topology and selected security controls for workload networks and Azure Storage.
 
-This is a learning project, not a production-ready reference implementation. The documentation distinguishes between what the current Terraform configuration deploys and improvements that should be completed before using the design in a production environment.
+This is a learning project, not a production-ready landing zone or a complete enterprise reference architecture. The configuration is deliberately small enough to study, while the README calls out important design boundaries and production considerations.
 
 ## Objectives
 
 The lab is intended to help practise:
 
 - Designing an Azure Hub-and-Spoke network topology.
-- Centralizing outbound connectivity through Azure Firewall.
-- Providing administrative access to virtual machines through Azure Bastion.
-- Connecting workload subnets to shared network services.
-- Using Terraform modules to organize Azure infrastructure.
-- Identifying the security, DNS, routing, monitoring, and operational controls needed in a larger environment.
+- Centralizing default outbound workload traffic through Azure Firewall.
+- Providing administrative access through Azure Bastion.
+- Segmenting workload subnets with Network Security Groups (NSGs).
+- Accessing Azure Blob Storage through a Private Endpoint and private DNS.
+- Using a VM system-assigned Managed Identity for Blob data-plane authorization.
+- Organizing Azure infrastructure with reusable Terraform modules.
+- Reviewing routing, identity, secrets, monitoring, and governance requirements.
 
-The design is vendor- and organization-neutral. It can be used as a starting point for discussing patterns that apply to many kinds of enterprise environments.
+The design is organization-neutral and can be used as a starting point for discussing patterns that apply to many kinds of enterprise environments.
 
 ## Architecture overview
 
-The current configuration contains one Hub virtual network and one Spoke virtual network.
+The current configuration deploys one Hub VNet and one Spoke VNet.
 
 ```mermaid
 flowchart TB
@@ -29,46 +31,89 @@ flowchart TB
         Firewall[Azure Firewall]
     end
     subgraph Spoke["Spoke VNet · 10.100.100.128/26"]
-        App[Application subnet]
-        DB[Database subnet]
-        Storage[Storage Account]
+        AppSubnet["Application subnet · NSG"]
+        DbSubnet["Database subnet · NSG"]
+        PESubnet["Private Endpoint subnet"]
         AppVM[Application VM]
-        DBVM[Database VM]
-        App --> AppVM
-        DB --> DBVM
-        App --> Storage
+        DbVM[Database VM]
+        PE[Blob Private Endpoint]
+        AppSubnet --> AppVM
+        DbSubnet --> DbVM
+        PESubnet --> PE
     end
-    AppVM -->|Outbound route via UDR| Firewall
-    DBVM -->|Outbound route via UDR| Firewall
     Hub <-->|VNet peering| Spoke
+    AppVM -->|Default route for outbound traffic| Firewall
+    DbVM -->|Default route for outbound traffic| Firewall
+    AppVM -->|Private DNS + private IP| PE
+    PE --> Storage[Azure Storage · Blob]
+    AppVM -.->|System-assigned Managed Identity| BlobRole["Storage Blob Data Reader"]
+    BlobRole -.-> Storage
     Firewall --> Internet[Internet]
 ```
 
-The diagram is a conceptual view of the current lab. It does not imply that every traffic path, including all east-west traffic or Private Endpoint traffic, is inspected by Azure Firewall.
+The diagram is a conceptual view. The default route sends default-route traffic from the application and database subnets to Azure Firewall. It does not mean every network flow, including all same-VNet traffic or Private Endpoint traffic, is inspected by the firewall.
 
-## Components currently defined in Terraform
+## Current Terraform implementation
 
-| Area | Current implementation |
+| Area | Implementation |
 |---|---|
-| Resource organization | One resource group |
-| Network topology | Hub and Spoke virtual networks with VNet peering |
-| Hub networking | Azure Firewall and Azure Bastion |
-| Workload networking | Application and database subnets in the Spoke |
-| Routing | Route table with a default route to the Hub Firewall, associated with both workload subnets |
-| Compute | Two Windows virtual machines in the Spoke |
-| Storage | Azure Storage Account with a Blob Private Endpoint |
-| Network rules | Azure Firewall network rule for ICMP from the workload subnets |
-| Application rules | Azure Firewall application rule for HTTP/HTTPS using a wildcard FQDN target |
+| Resource organization | One resource group for this lab |
+| Network topology | Hub and Spoke VNets with bidirectional VNet peering |
+| Hub | Azure Firewall Standard and Azure Bastion |
+| Bastion subnet | Dedicated `AzureBastionSubnet` with a `/26` prefix |
+| Workload networks | Separate application and database subnets |
+| Private Endpoint network | Dedicated subnet for the Blob Private Endpoint |
+| Network security | NSGs on application and database subnets; RDP is allowed only from the Bastion subnet, with other inbound traffic denied |
+| Routing | Default route from application and database subnets to the Hub Firewall |
+| Firewall rules | ICMP connectivity-test rule and HTTP/HTTPS application rule using a configurable FQDN allowlist |
+| Compute | Two Windows virtual machines without public IP addresses |
+| VM credentials | Separate generated local administrator passwords for the two VMs |
+| Storage | Storage Account with public network access disabled, HTTPS-only traffic, TLS 1.2 minimum, and shared-key access disabled |
+| Private access | Blob Private Endpoint, Blob Private DNS Zone, VNet link, and Private DNS Zone Group |
+| Workload identity | Application VM system-assigned Managed Identity with the `Storage Blob Data Reader` role on the Storage Account |
 | Infrastructure as Code | Terraform root configuration and separate Hub and Spoke modules |
 
-## Traffic flow
+## Network address plan
 
-- The Hub and Spoke virtual networks are connected using VNet peering.
-- A user can use Azure Bastion as the intended administrative entry point to the virtual machines; the VMs do not require their own public IP addresses.
-- The workload subnet route table sends default-route traffic (0.0.0.0/0) to the private IP address of Azure Firewall.
-- Azure Firewall rules determine which traffic is permitted through the firewall.
+| Network | CIDR | Purpose |
+|---|---:|---|
+| Hub VNet | `10.100.100.0/25` | Shared network services |
+| AzureFirewallSubnet | `10.100.100.0/26` | Azure Firewall |
+| AzureBastionSubnet | `10.100.100.64/26` | Azure Bastion |
+| Spoke VNet | `10.100.100.128/26` | Workload network |
+| Application subnet | `10.100.100.128/28` | Application VM |
+| Database subnet | `10.100.100.144/28` | Database VM |
+| Private Endpoint subnet | `10.100.100.160/28` | Blob Private Endpoint |
 
-A default route does not automatically force every possible network flow through the firewall. Azure system routes for more-specific prefixes can take precedence. In particular, traffic between subnets and traffic to Private Endpoints need explicit routing and security design if inspection is required.
+The remaining address space in the Spoke VNet is reserved for future lab expansion. Revisit the address plan before adding more workloads or Private Endpoints.
+
+## Traffic and security behaviour
+
+### Administrative access
+
+- The virtual machines have private IP addresses and no individual public IP addresses.
+- The NSGs allow inbound RDP (TCP/3389) only from the configured Azure Bastion subnet.
+- Other inbound traffic is denied by explicit NSG rules.
+- If application-to-database communication is required, add a narrowly scoped rule for the actual database port and source subnet. No such application/database rule is assumed by this lab.
+
+### Outbound traffic
+
+- The application and database subnets use a route table with `0.0.0.0/0` pointing to the Hub Firewall.
+- The Firewall application rule allows HTTP/HTTPS only to the FQDNs in `allowed_outbound_fqdns`.
+- The default FQDN list is intentionally small (`www.microsoft.com`). Customize it for the actual software update, package, and application dependencies before expecting general outbound connectivity.
+- The ICMP rule is retained for basic connectivity testing.
+
+A default route is not a complete east-west inspection design. Azure system routes for more-specific prefixes can take precedence. Traffic between subnets in the same VNet and traffic to Private Endpoints need separate analysis and, if inspection is required, explicit routing and Private Endpoint network-policy design. Do not assume VNet peering alone sends all traffic through the Firewall.
+
+### Blob Storage private access
+
+- The Storage Account public network endpoint is disabled.
+- The Blob Private Endpoint is placed in its own subnet.
+- The `privatelink.blob.core.windows.net` Private DNS zone is linked to the Spoke VNet.
+- The Private DNS Zone Group associates the Private Endpoint with the zone and maintains its DNS record.
+- The application VM uses its system-assigned Managed Identity and the `Storage Blob Data Reader` role for Blob data access. The Storage Account shared-key authentication is disabled.
+
+Private Endpoint connectivity and data-plane authorization are separate controls. A successful DNS lookup and TCP connection do not by themselves prove that the caller has permission to read Blob data.
 
 ## Repository structure
 
@@ -81,6 +126,7 @@ Hub-and-Spoke-Network/
     ├── providers.tf
     ├── main.tf
     ├── variables.tf
+    ├── outputs.tf
     └── modules/
         ├── hub/
         │   ├── main.tf
@@ -94,13 +140,31 @@ Hub-and-Spoke-Network/
 
 ## Prerequisites
 
-- An Azure subscription with permissions to create the resources in this lab.
+- An Azure subscription.
 - Terraform installed locally.
-- Azure CLI installed and authenticated, for example with `az login`.
-- A configured Azure subscription context.
-- Sufficient quota for the selected VM sizes and networking resources.
+- Azure CLI installed.
+- Permissions to create the resources in this lab, including role assignments for the application VM's Managed Identity.
+- Sufficient regional quota for the selected VM sizes and networking resources.
 
-The AzureRM provider is configured in the Terraform project. Review `terraform/providers.tf` and the input variables before deployment. Do not put real credentials or secrets in source control.
+The project uses AzureRM provider 4.x. Authenticate with Azure CLI and set the subscription context and environment variable before running Terraform.
+
+Bash:
+
+```bash
+az login
+az account set --subscription "<subscription-id>"
+export ARM_SUBSCRIPTION_ID="$(az account show --query id --output tsv)"
+```
+
+PowerShell:
+
+```powershell
+az login
+az account set --subscription "<subscription-id>"
+$env:ARM_SUBSCRIPTION_ID = az account show --query id --output tsv
+```
+
+Do not commit credentials, local state files, plan files, or secret variable files to source control.
 
 ## Deploying the lab
 
@@ -114,7 +178,24 @@ terraform plan
 terraform apply
 ```
 
-Review the plan carefully before applying it. Resource availability, quotas, naming constraints, and Azure pricing depend on the subscription and region.
+Review the plan carefully before applying it. Azure resource availability, quotas, naming constraints, permissions, and pricing depend on the subscription and region.
+
+The outbound FQDN allowlist can be customized at plan/apply time, for example:
+
+```bash
+terraform plan -var='allowed_outbound_fqdns=["www.microsoft.com","download.microsoft.com"]'
+```
+
+Use only the destinations required by the workloads. The example list is illustrative and is not a complete Windows Update or application dependency allowlist.
+
+The generated VM administrator passwords are exposed as sensitive Terraform outputs:
+
+```bash
+terraform output -raw vm_app_admin_password
+terraform output -raw vm_db_admin_password
+```
+
+Sensitive outputs are hidden in normal Terraform display, but their values remain in Terraform state. Protect the state accordingly.
 
 To remove the lab when it is no longer needed:
 
@@ -124,32 +205,30 @@ terraform destroy
 
 Review the destroy plan before confirming. Back up anything that must be retained.
 
-## Security considerations and known gaps
+## Security considerations and production gaps
 
-The current configuration is intentionally a starting point. The following items should be addressed or assessed before treating the environment as production-ready:
+This lab is intentionally not a complete production landing zone. Before adapting it to a real environment, assess at least the following:
 
-1. **Azure Bastion subnet sizing** — the current subnet is `/27`. Current Azure Bastion deployment requirements call for a dedicated `AzureBastionSubnet` of at least `/26`; update the address plan before deploying or recreating Bastion.
-2. **Private Endpoint DNS** — the Blob Private Endpoint is defined, but the configuration still needs the Private DNS Zone `privatelink.blob.core.windows.net`, the required VNet link(s), and a Private DNS Zone Group. Validate name resolution from every network that must access the storage account.
-3. **Storage public access** — a Private Endpoint does not by itself disable the Storage Account's public endpoint. Decide the intended access model and explicitly disable public network access if the account is meant to be private-only, after validating the private path and required operations.
-4. **Network Security Groups** — dedicated, appropriately scoped NSGs and subnet-level traffic rules are not currently defined. Add least-privilege rules based on actual application and database dependencies.
-5. **Firewall rules** — the current application rule uses `target_fqdns = ["*"]`, which is broad. Replace it with explicit destination FQDNs and ports appropriate to the workload. Use Azure Firewall Policy and a structured rule collection strategy as the design grows.
-6. **Routing and east-west inspection** — the default route does not guarantee inspection of traffic between all subnets or to Private Endpoints. Define the required traffic paths, route tables, and Private Endpoint network policy settings deliberately; do not assume peering alone provides centralized inspection.
-7. **Secrets and Terraform state** — VM credentials and other sensitive values must be handled carefully. Marking an output as sensitive only suppresses normal display; it does not remove the value from Terraform state. Use a secured remote backend with encryption and access controls, avoid reusing administrator passwords, and prefer Entra ID-based access or managed identities where supported.
-8. **Logging and monitoring** — diagnostic settings, centralized Log Analytics, alerting, and integration with Microsoft Sentinel are not yet implemented. Define retention, access, and monitoring requirements as part of the platform design.
-9. **Governance and operations** — a broader enterprise design should also consider management groups, subscription boundaries, Azure Policy, RBAC/PIM, Defender for Cloud, backup, update management, and operational ownership.
+1. **Terraform state and credentials** — configure a secured remote backend with encryption, access controls, locking, and appropriate recovery. The generated local administrator passwords are stored in Terraform state. Sensitive output flags do not encrypt or remove secret values from state. Do not commit state or plan files.
+2. **Administrative identity** — this lab uses local VM administrator credentials for initial access. Consider Entra ID-based VM sign-in, PIM-controlled administration, MFA, and separate operational identities for a real environment.
+3. **Network flows** — the NSGs intentionally deny inbound traffic other than Bastion RDP. Add only the required application and database flows, based on documented dependencies. Review outbound NSG rules as well as Firewall rules.
+4. **East-west and Private Endpoint inspection** — design explicit routing and Private Endpoint network policies if traffic inspection is required. The current default route does not provide complete inspection of all internal traffic.
+5. **Firewall operations** — the lab uses Firewall rule collections directly and a small FQDN allowlist. Larger environments should consider Azure Firewall Policy, structured rule collection groups, change control, and centralized ownership.
+6. **DNS architecture** — the Private DNS zone is created in the lab resource group and linked only to the Spoke VNet. Larger environments commonly centralize private DNS in a platform/connectivity subscription and link or resolve it from all required VNets and hybrid networks.
+7. **Monitoring** — diagnostic settings, centralized Log Analytics, alerting, and Microsoft Sentinel integration are not implemented. Define log sources, retention, alert ownership, and incident response processes.
+8. **Governance and resilience** — a wider enterprise design should consider management groups, subscription boundaries, Azure Policy, RBAC/PIM, Defender for Cloud, backup, update management, availability, disaster recovery, and cost controls.
+9. **Storage data access** — the application VM currently has read-only Blob data access. Add other roles only when justified by workload requirements, and scope them as narrowly as possible.
 
-These are review findings and design recommendations; they are not claims that the controls have already been implemented in Terraform.
+These are design boundaries and recommendations, not claims that the missing controls are already implemented.
 
-## Possible next improvements
+## Suggested next development steps
 
-The lab can be developed incrementally, validating each change with `terraform fmt`, `terraform validate`, and `terraform plan` before applying it. A sensible order is:
-
-1. Correct the Bastion subnet address space.
-2. Complete Private Endpoint DNS and decide the Storage Account public access model.
-3. Add NSGs and tighten Azure Firewall rules.
-4. Review routing for east-west and Private Endpoint traffic.
-5. Secure Terraform state and improve identity/secret handling.
-6. Add diagnostic settings, centralized monitoring, and governance controls.
+1. Add explicit application-to-database flows after selecting the database protocol and port.
+2. Decide whether internal and Private Endpoint traffic must be inspected by Azure Firewall, then implement and test the required routes and network policies.
+3. Move Terraform state to a secured remote backend.
+4. Add centralized diagnostics and monitoring for Azure Firewall, Bastion, NSGs, VMs, and Storage.
+5. Introduce Azure Firewall Policy and a more complete enterprise DNS design.
+6. Extend the lab with governance controls such as Azure Policy, RBAC/PIM, and Defender for Cloud.
 
 ## Disclaimer
 
