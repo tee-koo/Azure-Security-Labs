@@ -13,11 +13,13 @@ resource "azurerm_subnet" "firewall" {
   address_prefixes     = ["10.100.100.0/26"]
 }
 
+# Azure Bastion requires a dedicated subnet of at least /26 for current
+# deployment requirements. The Hub VNet /25 is split into two /26 subnets.
 resource "azurerm_subnet" "bastion" {
   name                 = "AzureBastionSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.hub.name
-  address_prefixes     = ["10.100.100.64/27"]
+  address_prefixes     = ["10.100.100.64/26"]
 }
 
 resource "azurerm_public_ip" "firewall_pip" {
@@ -44,7 +46,7 @@ resource "azurerm_firewall" "hub_fw" {
   }
 }
 
-# Network Rule: Allow ICMP (tracert)
+# ICMP is retained as a simple connectivity-testing rule for this lab.
 resource "azurerm_firewall_network_rule_collection" "allow_icmp" {
   name                = "Allow-ICMP"
   azure_firewall_name = azurerm_firewall.hub_fw.name
@@ -61,23 +63,25 @@ resource "azurerm_firewall_network_rule_collection" "allow_icmp" {
   }
 }
 
-# Application Rule: Allow HTTP/HTTPS
+# Keep outbound web access explicit. The default list is intentionally small;
+# workloads must supply the FQDNs they actually require.
 resource "azurerm_firewall_application_rule_collection" "allow_http_https" {
-  name                = "Allow-HTTP-HTTPS"
+  name                = "Allow-Approved-Web-Destinations"
   azure_firewall_name = azurerm_firewall.hub_fw.name
   resource_group_name = var.resource_group_name
   priority            = 200
   action              = "Allow"
 
   rule {
-    name = "HTTP-HTTPS-Out"
+    name             = "Approved-HTTP-HTTPS-Out"
     source_addresses = ["10.100.100.128/28", "10.100.100.144/28"]
-    target_fqdns = ["*"]
+    target_fqdns     = var.allowed_outbound_fqdns
 
     protocol {
       port = 80
       type = "Http"
     }
+
     protocol {
       port = 443
       type = "Https"
