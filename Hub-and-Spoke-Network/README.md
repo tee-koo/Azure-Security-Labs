@@ -115,6 +115,30 @@ A default route is not a complete east-west inspection design. Azure system rout
 
 Private Endpoint connectivity and data-plane authorization are separate controls. A successful DNS lookup and TCP connection do not by themselves prove that the caller has permission to read Blob data.
 
+
+
+### Verifying private connectivity
+
+From the application VM, verify that the normal Storage hostname resolves to the Private Endpoint's private IP address and that HTTPS is reachable:
+
+```powershell
+nslookup <storage-account-name>.blob.core.windows.net
+Test-NetConnection <storage-account-name>.blob.core.windows.net -Port 443
+```
+
+Also verify that the Storage Account public network endpoint is disabled:
+
+```bash
+az storage account show \
+  --name <storage-account-name> \
+  --resource-group rg-hub-spoke-lab \
+  --query publicNetworkAccess
+```
+
+The expected public network access value is `Disabled`. DNS resolution and TCP connectivity do not prove data-plane authorization; test Blob access separately using the VM's Managed Identity and an appropriate Blob data role. This lab does not create a Blob container or upload test data.
+
+Because Shared Key access is disabled, future Terraform resources that create or manage Storage containers and blobs may need AzureRM provider Azure AD authentication configured (for example, `storage_use_azuread` where supported by the resource). Check the provider documentation for each resource before extending the lab.
+
 ## Repository structure
 
 ```text
