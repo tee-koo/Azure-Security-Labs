@@ -13,7 +13,7 @@ The lab is intended to help practise:
 - Providing administrative access through Azure Bastion.
 - Segmenting workload subnets with Network Security Groups (NSGs).
 - Accessing Azure Blob Storage through a Private Endpoint and private DNS.
-- Using a VM system-assigned Managed Identity for Blob data-plane authorization.
+- Using a VM system-assigned Managed Identity for Blob read/write data-plane authorization.
 - Organizing Azure infrastructure with reusable Terraform modules.
 - Reviewing routing, identity, secrets, monitoring, and governance requirements.
 
@@ -69,7 +69,7 @@ This high-level diagram shows only the main connections. The two-way arrows for 
 | VM credentials | Separate generated local administrator passwords for the two VMs |
 | Storage | Storage Account with public network access disabled, HTTPS-only traffic, TLS 1.2 minimum, and shared-key access disabled |
 | Private access | Blob Private Endpoint, Blob Private DNS Zone, VNet link, and Private DNS Zone Group |
-| Workload identity | Application VM system-assigned Managed Identity with the `Storage Blob Data Reader` role on the Storage Account |
+| Workload identity | Application VM system-assigned Managed Identity with the `Storage Blob Data Contributor` role on the Storage Account |
 | Infrastructure as Code | Terraform root configuration and separate Hub and Spoke modules |
 
 ## Network address plan
@@ -110,7 +110,7 @@ A default route is not a complete east-west inspection design. Azure system rout
 - The Blob Private Endpoint is placed in its own subnet.
 - The `privatelink.blob.core.windows.net` Private DNS zone is linked to the Spoke VNet.
 - The Private DNS Zone Group associates the Private Endpoint with the zone and maintains its DNS record.
-- The application VM uses its system-assigned Managed Identity and the `Storage Blob Data Reader` role for Blob data access. The Storage Account shared-key authentication is disabled.
+- The application VM uses its system-assigned Managed Identity and the `Storage Blob Data Contributor` role for Blob read/write access. The Storage Account shared-key authentication is disabled.
 
 Private Endpoint connectivity and data-plane authorization are separate controls. A successful DNS lookup and TCP connection do not by themselves prove that the caller has permission to read Blob data.
 
@@ -238,7 +238,7 @@ This lab is intentionally not a complete production landing zone. Before adaptin
 6. **DNS architecture** — the Private DNS zone is created in the lab resource group and linked only to the Spoke VNet. Larger environments commonly centralize private DNS in a platform/connectivity subscription and link or resolve it from all required VNets and hybrid networks.
 7. **Monitoring** — diagnostic settings, centralized Log Analytics, alerting, and Microsoft Sentinel integration are not implemented. Define log sources, retention, alert ownership, and incident response processes.
 8. **Governance and resilience** — a wider enterprise design should consider management groups, subscription boundaries, Azure Policy, RBAC/PIM, Defender for Cloud, backup, update management, availability, disaster recovery, and cost controls.
-9. **Storage data access** — the application VM currently has read-only Blob data access. Add other roles only when justified by workload requirements, and scope them as narrowly as possible.
+9. **Storage data access** — the application VM has Blob read/write access through `Storage Blob Data Contributor`, currently scoped to the Storage Account. If the workload only needs a specific container, consider assigning the role at container scope to follow least privilege.
 
 These are design boundaries and recommendations, not claims that the missing controls are already implemented.
 
