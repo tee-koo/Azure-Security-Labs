@@ -62,12 +62,18 @@ resource "azurerm_private_endpoint" "storage_pe" {
   }
 }
 
-# The application VM uses its system-assigned identity for Blob data access.
+# The application VM uses its system-assigned identity for Blob read/write access.
 # No storage account key is required or enabled in this lab.
-resource "azurerm_role_assignment" "app_vm_blob_reader" {
+resource "azurerm_role_assignment" "app_vm_blob_contributor" {
   scope                = azurerm_storage_account.demo.id
-  role_definition_name = "Storage Blob Data Reader"
+  role_definition_name = "Storage Blob Data Contributor"
   principal_id         = azurerm_windows_virtual_machine.app_vm.identity[0].principal_id
+}
+
+# Preserve the existing Terraform state address when renaming the role assignment.
+moved {
+  from = azurerm_role_assignment.app_vm_blob_reader
+  to   = azurerm_role_assignment.app_vm_blob_contributor
 }
 
 resource "random_password" "app_admin_password" {
