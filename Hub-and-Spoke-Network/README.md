@@ -26,40 +26,31 @@ The current configuration deploys one Hub VNet and one Spoke VNet.
 ```mermaid
 flowchart TB
     Admin[Administrator]
-    Bastion[Azure Bastion]
 
     subgraph Hub["Hub VNet"]
-        Bastion
+        Bastion[Azure Bastion]
         Firewall[Azure Firewall]
     end
 
     subgraph Spoke["Spoke VNet"]
-        AppVM[Application VM]
-        DbVM[Database VM]
+        Workloads["Application VM and Database VM"]
         PE[Blob Private Endpoint]
     end
 
-    Storage[Azure Blob Storage]
     Internet((Internet))
+    Storage[Azure Blob Storage]
 
     Admin --> Bastion
-    Bastion <-->|RDP session| AppVM
-    Bastion <-->|RDP session| DbVM
-
-    AppVM -->|Outbound| Firewall
-    DbVM -->|Outbound| Firewall
-    Firewall -->|Outbound| Internet
-    Internet -->|Return traffic| Firewall
-    Firewall -->|Return traffic| AppVM
-    Firewall -->|Return traffic| DbVM
-
-    AppVM <-->|Private access| PE
-    PE <-->|Private Link| Storage
-
+    Bastion <-->|Management| Workloads
     Hub <-->|VNet peering| Spoke
+
+    Workloads <-->|Outbound and response traffic| Firewall
+    Firewall <-->|Outbound and response traffic| Internet
+
+    Workloads --> PE --> Storage
 ```
 
-The diagram is intentionally simplified: the two workload VMs are grouped together, and only the main traffic paths are shown. Internet return traffic is a response to VM-initiated connections, not permission for unsolicited inbound connections. Hub and Spoke are connected by VNet peering. Private Endpoint traffic is separate from the Firewall path. The Application VM uses its Managed Identity for Blob authorization.
+This high-level diagram shows only the main connections. The two-way arrows for Firewall traffic represent outbound connections initiated by the VMs and their responses; they do not mean unsolicited inbound Internet connections are allowed. Private Endpoint traffic is shown separately from the Firewall path. The Application VM uses its Managed Identity to access Blob data.
 
 ## Current Terraform implementation
 
