@@ -24,8 +24,9 @@ The design is organization-neutral and can be used as a starting point for discu
 The current configuration deploys one Hub VNet and one Spoke VNet.
 
 ```mermaid
-flowchart LR
-    Admin[Administrator] --> Bastion[Azure Bastion]
+flowchart TB
+    Admin[Administrator]
+    Bastion[Azure Bastion]
 
     subgraph Hub["Hub VNet"]
         Bastion
@@ -33,17 +34,27 @@ flowchart LR
     end
 
     subgraph Spoke["Spoke VNet"]
-        Workloads["Application VM<br/>Database VM"]
+        AppVM[Application VM]
+        DbVM[Database VM]
         PE[Blob Private Endpoint]
     end
 
-    Workloads -->|Outbound| Firewall
-    Firewall -->|Outbound| Internet((Internet))
-    Internet -->|Return traffic| Firewall
-    Firewall -->|Return traffic| Workloads
+    Storage[Azure Blob Storage]
+    Internet((Internet))
 
-    Workloads -->|Private access| PE
-    PE --> Storage[Azure Blob Storage]
+    Admin --> Bastion
+    Bastion <-->|RDP session| AppVM
+    Bastion <-->|RDP session| DbVM
+
+    AppVM -->|Outbound| Firewall
+    DbVM -->|Outbound| Firewall
+    Firewall -->|Outbound| Internet
+    Internet -->|Return traffic| Firewall
+    Firewall -->|Return traffic| AppVM
+    Firewall -->|Return traffic| DbVM
+
+    AppVM <-->|Private access| PE
+    PE <-->|Private Link| Storage
 
     Hub <-->|VNet peering| Spoke
 ```
