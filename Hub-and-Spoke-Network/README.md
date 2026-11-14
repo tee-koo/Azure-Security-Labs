@@ -238,7 +238,7 @@ This lab is intentionally not a complete production landing zone. Before adaptin
 6. **DNS architecture** — the Private DNS zone is created in the lab resource group and linked only to the Spoke VNet. Larger environments commonly centralize private DNS in a platform/connectivity subscription and link or resolve it from all required VNets and hybrid networks.
 7. **Monitoring** — diagnostic settings, centralized Log Analytics, alerting, and Microsoft Sentinel integration are not implemented. Define log sources, retention, alert ownership, and incident response processes.
 8. **Governance and resilience** — a wider enterprise design should consider management groups, subscription boundaries, Azure Policy, RBAC/PIM, Defender for Cloud, backup, update management, availability, disaster recovery, and cost controls.
-9. **Storage data access** — the application VM has Blob read/write access through `Storage Blob Data Contributor`, currently scoped to the Storage Account. If the workload only needs a specific container, consider assigning the role at container scope to follow least privilege.
+9. **Storage data access** — the application VM's system-assigned Managed Identity has the `Storage Blob Data Contributor` role at Storage Account scope, providing Blob read/write access across the account's containers. This scope is used intentionally in this lab; production workloads should use a narrower container-level assignment when their access requirements allow it.
 
 These are design boundaries and recommendations, not claims that the missing controls are already implemented.
 
