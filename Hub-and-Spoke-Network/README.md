@@ -38,15 +38,24 @@ flowchart TB
         PE[Blob Private Endpoint]
     end
 
-    Bastion -->|Admin access| AppVM
-    Bastion -->|Admin access| DbVM
-    AppVM --> Firewall
-    DbVM --> Firewall
-    Firewall --> Internet((Internet))
-    AppVM --> PE --> Storage[Azure Blob Storage]
+    Hub <-->|VNet peering| Spoke
+
+    Bastion <-->|RDP session| AppVM
+    Bastion <-->|RDP session| DbVM
+
+    AppVM -->|Outbound| Firewall
+    DbVM -->|Outbound| Firewall
+    Firewall -->|Outbound| Internet((Internet))
+
+    Internet -->|Response traffic| Firewall
+    Firewall -->|Response traffic| AppVM
+    Firewall -->|Response traffic| DbVM
+
+    AppVM <-->|Private data traffic| PE
+    PE <-->|Private Link| Storage[Azure Blob Storage]
 ```
 
-The Hub and Spoke VNets are connected by VNet peering. The diagram shows the main paths only: administration through Bastion, outbound workload traffic through Firewall, and private Blob access through the Private Endpoint. The Application VM uses its Managed Identity for Blob authorization. The Firewall does not inspect every internal or Private Endpoint flow.
+The arrows distinguish outbound connections from their return traffic. The return arrows represent responses to connections initiated by the VMs; they do not indicate that unsolicited inbound connections from the Internet are allowed. The Hub and Spoke VNets are connected by VNet peering. Private Endpoint traffic is shown separately and does not automatically pass through Azure Firewall. The Application VM uses its Managed Identity for Blob authorization.
 
 ## Current Terraform implementation
 
