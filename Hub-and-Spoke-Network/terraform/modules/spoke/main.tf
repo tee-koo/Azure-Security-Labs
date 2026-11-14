@@ -42,6 +42,14 @@ resource "azurerm_storage_account" "demo" {
   tags                            = var.tags
 }
 
+# Private application container. Using storage_account_id makes the provider
+# manage this container through the Azure Resource Manager API.
+resource "azurerm_storage_container" "appdata" {
+  name                  = "appdata"
+  storage_account_id    = azurerm_storage_account.demo.id
+  container_access_type = "private"
+}
+
 resource "azurerm_private_endpoint" "storage_pe" {
   name                = "pe-storage-blob"
   location            = var.location
@@ -65,7 +73,7 @@ resource "azurerm_private_endpoint" "storage_pe" {
 # The application VM uses its system-assigned identity for Blob read/write access.
 # No storage account key is required or enabled in this lab.
 resource "azurerm_role_assignment" "app_vm_blob_contributor" {
-  scope                = azurerm_storage_account.demo.id
+  scope                = azurerm_storage_container.appdata.id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = azurerm_windows_virtual_machine.app_vm.identity[0].principal_id
 }
