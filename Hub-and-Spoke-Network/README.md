@@ -25,41 +25,31 @@ The current configuration deploys one Hub VNet and one Spoke VNet.
 
 ```mermaid
 flowchart TB
-    Admin[Administrator] -->|Management session| Bastion
+    Admin[Administrator] --> Bastion[Azure Bastion]
 
-    subgraph Hub["Hub VNet · 10.100.100.0/25"]
-        direction LR
-        Bastion[Azure Bastion]
+    subgraph Hub["Hub VNet"]
+        Bastion
         Firewall[Azure Firewall]
     end
 
-    subgraph Spoke["Spoke VNet · 10.100.100.128/26"]
-        direction LR
-        subgraph Workloads["Workload subnets"]
-            direction TB
-            AppSubnet["Application subnet · NSG"] --> AppVM[Application VM]
-            DbSubnet["Database subnet · NSG"] --> DbVM[Database VM]
-        end
-        subgraph PrivateAccess["Private Endpoint subnet"]
-            direction TB
-            PE[Blob Private Endpoint]
-        end
+    subgraph Spoke["Spoke VNet"]
+        AppVM[Application VM]
+        DbVM[Database VM]
+        PE[Blob Private Endpoint]
     end
 
     Hub <-->|VNet peering| Spoke
 
     AppVM -->|Outbound| Firewall
     DbVM -->|Outbound| Firewall
-    Firewall -->|Allowed traffic| Internet((Internet))
-    Internet -->|Established-flow response| Firewall
-    Firewall -->|Return traffic| AppVM
-    Firewall -->|Return traffic| DbVM
+    Firewall -->|Outbound| Internet((Internet))
+    Internet -->|Response| Firewall
+    Firewall -->|Response| AppVM
+    Firewall -->|Response| DbVM
 
-    AppVM -->|Private DNS + private IP| PE
-    PE --> Storage[Azure Storage · Blob]
-
-    AppVM -.->|Managed Identity| BlobRole["Storage Blob Data Reader"]
-    BlobRole -.-> Storage
+    AppVM -->|Private connection| PE
+    PE --> Storage[Azure Blob Storage]
+    AppVM -.->|Managed Identity / Blob Data Reader| Storage
 ```
 
 The diagram is a conceptual view. The default route sends default-route traffic from the application and database subnets to Azure Firewall. It does not mean every network flow, including all same-VNet traffic or Private Endpoint traffic, is inspected by the firewall.
@@ -155,8 +145,6 @@ Because Shared Key access is disabled, future Terraform resources that create or
 ```text
 Hub-and-Spoke-Network/
 ├── README.md
-├── picture/
-│   └── pic1.jpg
 └── terraform/
     ├── providers.tf
     ├── main.tf
