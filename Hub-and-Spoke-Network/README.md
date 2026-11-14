@@ -24,7 +24,7 @@ The design is organization-neutral and can be used as a starting point for discu
 The current configuration deploys one Hub VNet and one Spoke VNet.
 
 ```mermaid
-flowchart TB
+flowchart LR
     Admin[Administrator] --> Bastion[Azure Bastion]
 
     subgraph Hub["Hub VNet"]
@@ -33,29 +33,22 @@ flowchart TB
     end
 
     subgraph Spoke["Spoke VNet"]
-        AppVM[Application VM]
-        DbVM[Database VM]
+        Workloads["Application VM<br/>Database VM"]
         PE[Blob Private Endpoint]
     end
 
-    Hub <-->|VNet peering| Spoke
-
-    Bastion <-->|RDP session| AppVM
-    Bastion <-->|RDP session| DbVM
-
-    AppVM -->|Outbound| Firewall
-    DbVM -->|Outbound| Firewall
+    Workloads -->|Outbound| Firewall
     Firewall -->|Outbound| Internet((Internet))
+    Internet -->|Return traffic| Firewall
+    Firewall -->|Return traffic| Workloads
 
-    Internet -->|Response traffic| Firewall
-    Firewall -->|Response traffic| AppVM
-    Firewall -->|Response traffic| DbVM
+    Workloads -->|Private access| PE
+    PE --> Storage[Azure Blob Storage]
 
-    AppVM <-->|Private data traffic| PE
-    PE <-->|Private Link| Storage[Azure Blob Storage]
+    Hub <-->|VNet peering| Spoke
 ```
 
-The arrows distinguish outbound connections from their return traffic. The return arrows represent responses to connections initiated by the VMs; they do not indicate that unsolicited inbound connections from the Internet are allowed. The Hub and Spoke VNets are connected by VNet peering. Private Endpoint traffic is shown separately and does not automatically pass through Azure Firewall. The Application VM uses its Managed Identity for Blob authorization.
+The diagram is intentionally simplified: the two workload VMs are grouped together, and only the main traffic paths are shown. Internet return traffic is a response to VM-initiated connections, not permission for unsolicited inbound connections. Hub and Spoke are connected by VNet peering. Private Endpoint traffic is separate from the Firewall path. The Application VM uses its Managed Identity for Blob authorization.
 
 ## Current Terraform implementation
 
